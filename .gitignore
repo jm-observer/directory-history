@@ -1,3 +1,5 @@
 /target
 .idea
 Cargo.lock
+.dir.json
+.dir.old.json
