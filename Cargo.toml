@@ -1,0 +1,16 @@
+[package]
+name = "files-change"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sha2 = "0.10.2"
+hex-literal = "0.3.4"
+tokio = { version = "1.17.0", features = ["full"] }
+anyhow = "1.0.56"
+async-recursion = "1.0.0"
+#serde = { version = "1.0", features = ["derive"]}
+log = "0.4.16"
+#clap = "3.1.9"
