@@ -43,7 +43,7 @@ impl Dir {
     }
 
     pub fn sort(&mut self) {
-        self.dirs.sort_by_key(|x| x.name.clone());
-        self.files.sort_by_key(|x| x.name.clone());
+        self.dirs.sort_by(|x, y| x.name.cmp(&y.name));
+        self.files.sort_by(|x, y| x.name.cmp(&y.name));
     }
 }
