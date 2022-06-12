@@ -9,7 +9,7 @@ use tokio::fs::read_dir;
 use tokio::task::JoinHandle;
 
 #[async_recursion]
-pub async fn init_dir(path: PathBuf) -> Result<Dir> {
+pub async fn record_dir(path: PathBuf) -> Result<Dir> {
     if path.is_dir() {
         let mut read_dir = read_dir(path.as_path())
             .await
@@ -22,9 +22,11 @@ pub async fn init_dir(path: PathBuf) -> Result<Dir> {
             if let Ok(metadata) = sub_dir.metadata().await {
                 let file_path = sub_dir.path();
                 if metadata.is_file() {
-                    sub_files.push(tokio::spawn(init_file(file_path)));
+                    sub_files.push(tokio::spawn(record_file(file_path)));
                 } else if metadata.is_dir() {
-                    dir_res.push(tokio::spawn(async move { init_dir(sub_dir.path()).await }));
+                    dir_res.push(tokio::spawn(
+                        async move { record_dir(sub_dir.path()).await },
+                    ));
                 }
             } else {
                 warn!("读取文件[{:?}]metadata失败", sub_dir.path());
@@ -103,7 +105,7 @@ pub async fn collect_sub_dirs(
     Ok(sub_dirs)
 }
 
-pub async fn init_file(file_path: PathBuf) -> Result<File> {
+pub async fn record_file(file_path: PathBuf) -> Result<File> {
     let data = tokio::fs::read(file_path.as_path()).await?;
     let name = get_file_name(&file_path)?;
     let mut hasher = Sha256::new();

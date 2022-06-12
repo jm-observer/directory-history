@@ -1,17 +1,8 @@
 use crate::ty::compare::ChangeRecord;
 use crate::ty::{Dir, File};
-use anyhow::Result;
 use async_recursion::async_recursion;
 use log::warn;
-use std::path::{Path, PathBuf};
 use std::vec::IntoIter;
-
-pub async fn compare(
-    before_data_path: impl AsRef<Path>,
-    data_path: impl AsRef<Path>,
-) -> Result<()> {
-    Ok(())
-}
 
 #[async_recursion]
 pub async fn compare_dir(mut dir_before: Dir, mut dir: Dir) -> Vec<ChangeRecord> {
@@ -22,12 +13,12 @@ pub async fn compare_dir(mut dir_before: Dir, mut dir: Dir) -> Vec<ChangeRecord>
     let sub_dirs_before = dir_before.dirs.into_iter();
     let mut dir_change_records = Vec::new();
 
-    dir_change_records.append(&mut compare_dirs(sub_dirs_before, sub_dirs).await);
+    dir_change_records.append(&mut compare_sub_dirs(sub_dirs_before, sub_dirs).await);
     dir_change_records.append(&mut compare_files(&dir_before.files, &dir.files));
     dir_change_records
 }
 #[async_recursion]
-pub async fn compare_dirs(
+async fn compare_sub_dirs(
     mut dirs_before: IntoIter<Dir>,
     mut dirs: IntoIter<Dir>,
 ) -> Vec<ChangeRecord> {
@@ -99,7 +90,7 @@ pub async fn compare_dirs(
     dir_change_records
 }
 
-pub fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeRecord> {
+fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeRecord> {
     let mut index_before = 0;
     let mut index = 0;
     let file_num = files.len();
@@ -153,11 +144,6 @@ pub fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeR
         }
     }
     file_change_records
-}
-
-pub async fn init_dir(data_path: impl AsRef<Path>) -> Result<Dir> {
-    let data = tokio::fs::read(data_path).await?;
-    Ok(serde_json::from_slice(data.as_slice())?)
 }
 
 #[cfg(test)]
