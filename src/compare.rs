@@ -5,10 +5,7 @@ use log::warn;
 use std::vec::IntoIter;
 
 #[async_recursion]
-pub async fn compare_dir(mut dir_before: Dir, mut dir: Dir) -> Vec<ChangeRecord> {
-    dir_before.sort();
-    dir.sort();
-
+pub async fn compare_dir(dir_before: Dir, dir: Dir) -> Vec<ChangeRecord> {
     let sub_dirs = dir.dirs.into_iter();
     let sub_dirs_before = dir_before.dirs.into_iter();
     let mut dir_change_records = Vec::new();
@@ -50,8 +47,10 @@ async fn compare_sub_dirs(
         if let Some(dir_tmp) = dir_op.take() {
             if let Some(dir_before_tmp) = dir_op_before.take() {
                 if dir_tmp.name == dir_before_tmp.name {
-                    // 需要进一步比较文件夹内的文件
-                    sub_dir_compare.push(tokio::spawn(compare_dir(dir_before_tmp, dir_tmp)));
+                    if dir_tmp.sha256 != dir_before_tmp.sha256 {
+                        // 需要进一步比较文件夹内的文件
+                        sub_dir_compare.push(tokio::spawn(compare_dir(dir_before_tmp, dir_tmp)));
+                    }
                     dir_op = dirs.next();
                     dir_op_before = dirs_before.next();
                 } else if dir_tmp.name < dir_before_tmp.name {
@@ -90,7 +89,7 @@ async fn compare_sub_dirs(
     dir_change_records
 }
 
-fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeRecord> {
+pub fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeRecord> {
     let mut index_before = 0;
     let mut index = 0;
     let file_num = files.len();

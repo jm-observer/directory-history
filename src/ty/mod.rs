@@ -1,18 +1,20 @@
 pub mod compare;
 
+use crate::common::sha256;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct File {
     pub(crate) name: String,
     pub(crate) path: PathBuf,
     pub(crate) sha256: String,
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Dir {
     pub(crate) name: String,
     pub(crate) path: PathBuf,
+    pub(crate) sha256: String,
     pub(crate) files: Vec<File>,
     pub(crate) dirs: Vec<Dir>,
 }
@@ -26,7 +28,15 @@ impl File {
         }
     }
 }
-impl Dir {
+
+pub struct DirBuilder {
+    pub(crate) name: String,
+    pub(crate) path: PathBuf,
+    pub(crate) files: Vec<File>,
+    pub(crate) dirs: Vec<Dir>,
+}
+
+impl DirBuilder {
     pub fn new(name: impl Into<String>, path: impl Into<PathBuf>) -> Self {
         Self {
             name: name.into(),
@@ -42,8 +52,48 @@ impl Dir {
         self.files = files;
     }
 
-    pub fn sort(&mut self) {
-        self.dirs.sort_by(|x, y| x.name.cmp(&y.name));
-        self.files.sort_by(|x, y| x.name.cmp(&y.name));
+    // fn sort(&mut self) {
+    //     self.dirs.sort_by(|x, y| x.name.cmp(&y.name));
+    //     self.files.sort_by(|x, y| x.name.cmp(&y.name));
+    // }
+
+    pub fn build(self) -> Dir {
+        let DirBuilder {
+            name,
+            path,
+            mut files,
+            mut dirs,
+        } = self;
+        files.sort_by(|x, y| x.name.cmp(&y.name));
+        dirs.sort_by(|x, y| x.name.cmp(&y.name));
+
+        let res = files.iter().fold(String::new(), |mut x, item| {
+            x.push_str(item.sha256.as_str());
+            x
+        });
+        let sha256 = sha256(res.as_bytes());
+        Dir {
+            name,
+            path,
+            files,
+            dirs,
+            sha256,
+        }
+    }
+}
+
+impl Dir {
+    pub fn find_dir(&self, name: &str) -> Option<&Dir> {
+        if self.name.as_str() == name {
+            return Some(&self);
+        } else {
+            for sub in self.dirs.iter() {
+                let res = sub.find_dir(name);
+                if res.is_some() {
+                    return res;
+                }
+            }
+        }
+        None
     }
 }

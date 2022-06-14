@@ -17,6 +17,7 @@ pub enum Commands {
 #[derive(Args, Debug)]
 pub struct Record {
     pub target_path: PathBuf,
+    pub record_name: String,
 }
 #[derive(Args, Debug)]
 pub struct Compare {

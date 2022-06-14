@@ -1,0 +1,16 @@
+[tasks.builds]
+script = '''
+cargo build --release
+'''
+
+[tasks.record]
+script_runner  = "@shell"
+script = '''
+./target/release/directory-history record c:// ${@}
+'''
+
+[tasks.compare]
+script_runner  = "@shell"
+script = '''
+./target/release/directory-history compare ${@}
+'''

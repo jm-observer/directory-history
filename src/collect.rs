@@ -1,9 +1,8 @@
-use crate::common::get_file_name;
-use crate::ty::{Dir, File};
+use crate::common::{get_file_name, sha256};
+use crate::ty::{Dir, DirBuilder, File};
 use anyhow::{anyhow, bail, Context, Result};
 use async_recursion::async_recursion;
 use log::{debug, warn};
-use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use tokio::fs::read_dir;
 use tokio::task::JoinHandle;
@@ -15,7 +14,7 @@ pub async fn record_dir(path: PathBuf) -> Result<Dir> {
             .await
             .context(anyhow!("读取文件夹[{:?}]失败", path.as_path()))?;
         let name = get_file_name(&path)?;
-        let mut dir = Dir::new(name, path.clone());
+        let mut dir = DirBuilder::new(name, path.clone());
         let mut dir_res = Vec::default();
         let mut sub_files = Vec::default();
         while let Ok(Some(sub_dir)) = read_dir.next_entry().await {
@@ -39,8 +38,7 @@ pub async fn record_dir(path: PathBuf) -> Result<Dir> {
 
         let dirs = dirs_handle.await??;
         dir.update_sub_dirs(dirs);
-
-        Ok(dir)
+        Ok(dir.build())
     } else {
         warn!("文件属性有误或无权限: {:?}", path,);
         bail!("文件属性有误或无权限: {:?}", path);
@@ -106,11 +104,19 @@ pub async fn collect_sub_dirs(
 }
 
 pub async fn record_file(file_path: PathBuf) -> Result<File> {
-    let data = tokio::fs::read(file_path.as_path()).await?;
-    let name = get_file_name(&file_path)?;
-    let mut hasher = Sha256::new();
-    hasher.update(&data);
-    let result: Vec<u8> = hasher.finalize().to_vec();
-    let sha256 = hex::encode(result);
-    Ok(File::new(name, file_path, sha256))
+    match record_file_detail(&file_path).await {
+        Ok(file) => Ok(file),
+        Err(e) => {
+            bail!("文件{:?}读取失败:{:?}", file_path, e);
+        }
+    }
+}
+pub async fn record_file_detail(file_path: &PathBuf) -> Result<File> {
+    if let Ok(data) = tokio::fs::read(file_path.as_path()).await {
+        let name = get_file_name(&file_path)?;
+        let sha256 = sha256(&data);
+        Ok(File::new(name, file_path, sha256))
+    } else {
+        Err(anyhow!("读取文件{:?}报错", file_path))
+    }
 }
