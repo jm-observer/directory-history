@@ -11,7 +11,7 @@ use crate::command::{Compare, Record};
 use crate::compare::compare_dir;
 use crate::ty::Dir;
 use anyhow::Result;
-use log::info;
+use log::{debug, info};
 
 pub async fn record(record: Record) -> Result<()> {
     info!("record: {:?}", record);
@@ -29,6 +29,7 @@ pub async fn compare(compare: Compare) -> Result<()> {
     let mut compare = compare_dir(dir_before, dir).await;
     compare.sort();
 
+    debug!("{:?}", compare);
     let data = serde_json::to_vec(&compare)?;
     tokio::fs::write("compare-result", data).await?;
     Ok(())

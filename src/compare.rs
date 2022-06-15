@@ -6,11 +6,16 @@ use std::vec::IntoIter;
 
 #[async_recursion]
 pub async fn compare_dir(dir_before: Dir, dir: Dir) -> Vec<ChangeRecord> {
+    // debug!(
+    //     "比对：{:?}:{}——{:?}:{}",
+    //     dir_before.path, dir_before.sha256, dir.path, dir.sha256
+    // );
     let sub_dirs = dir.dirs.into_iter();
     let sub_dirs_before = dir_before.dirs.into_iter();
     let mut dir_change_records = Vec::new();
 
-    dir_change_records.append(&mut compare_sub_dirs(sub_dirs_before, sub_dirs).await);
+    let mut sub_dirs_records = compare_sub_dirs(sub_dirs_before, sub_dirs).await;
+    dir_change_records.append(&mut sub_dirs_records);
     dir_change_records.append(&mut compare_files(&dir_before.files, &dir.files));
     dir_change_records
 }
@@ -27,9 +32,9 @@ async fn compare_sub_dirs(
         if dir_op.is_none() {
             // 剩下的旧文件都为删除文件
             if let Some(dir_tmp) = dir_op_before {
-                dir_change_records.push(ChangeRecord::init_delete_dir_record(dir_tmp.name));
+                dir_change_records.push(ChangeRecord::init_delete_dir_record(dir_tmp.path));
                 while let Some(dir_tmp) = dirs_before.next() {
-                    dir_change_records.push(ChangeRecord::init_delete_dir_record(dir_tmp.name));
+                    dir_change_records.push(ChangeRecord::init_delete_dir_record(dir_tmp.path));
                 }
             }
             break;
@@ -37,15 +42,20 @@ async fn compare_sub_dirs(
         if dir_op_before.is_none() {
             // 剩下的旧文件都为删除文件
             if let Some(dir_tmp) = dir_op {
-                dir_change_records.push(ChangeRecord::init_add_dir_record(dir_tmp.name));
+                dir_change_records.push(ChangeRecord::init_add_dir_record(dir_tmp.path));
                 while let Some(dir_tmp) = dirs.next() {
-                    dir_change_records.push(ChangeRecord::init_add_dir_record(dir_tmp.name));
+                    dir_change_records.push(ChangeRecord::init_add_dir_record(dir_tmp.path));
                 }
             }
             break;
         };
         if let Some(dir_tmp) = dir_op.take() {
             if let Some(dir_before_tmp) = dir_op_before.take() {
+                // debug!(
+                //     "比对子文件夹：{:?}:{} {:?}:{}",
+                //     dir_tmp.name,
+                //     dir_tmp.sha256, dir_before_tmp.name, dir_before_tmp.sha256
+                // );
                 if dir_tmp.name == dir_before_tmp.name {
                     if dir_tmp.sha256 != dir_before_tmp.sha256 {
                         // 需要进一步比较文件夹内的文件
@@ -56,13 +66,13 @@ async fn compare_sub_dirs(
                 } else if dir_tmp.name < dir_before_tmp.name {
                     // 当前文件为新增文件
                     dir_change_records
-                        .push(ChangeRecord::init_add_dir_record(dir_tmp.name.clone()));
+                        .push(ChangeRecord::init_add_dir_record(dir_tmp.path.clone()));
                     dir_op = dirs.next();
                     dir_op_before = Some(dir_before_tmp);
                 } else {
                     // 该历史文件为删除文件
                     dir_change_records.push(ChangeRecord::init_delete_dir_record(
-                        dir_before_tmp.name.clone(),
+                        dir_before_tmp.path.clone(),
                     ));
                     dir_op_before = dirs_before.next();
                     dir_op = Some(dir_tmp)
@@ -74,12 +84,10 @@ async fn compare_sub_dirs(
     for tmp in sub_dir_compare.into_iter() {
         match tmp.await {
             Ok(mut records) => {
-                // Ok(mut records) => {
-                dir_change_records.append(&mut records);
-                // }
-                // Err(e) => {
-                //     warn!("文件夹比对报错: {:?}", e);
-                // }
+                if records.len() > 0 {
+                    // debug!("新增差异记录: {}", records.len());
+                    dir_change_records.append(&mut records);
+                }
             }
             Err(e) => {
                 warn!("文件夹比对报错: {:?}", e);
@@ -102,7 +110,7 @@ pub fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeR
             // 剩下的旧文件都为删除文件
             while index_before < file_before_num {
                 file_change_records.push(ChangeRecord::init_delete_file_record(
-                    files_before[index_before].name.clone(),
+                    files_before[index_before].path.clone(),
                 ));
                 index_before += 1;
             }
@@ -114,7 +122,7 @@ pub fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeR
             // 剩下的新文件都为新增文件
             while index < file_num {
                 file_change_records.push(ChangeRecord::init_add_file_record(
-                    files[index].name.clone(),
+                    files[index].path.clone(),
                 ));
                 index_before += 1;
             }
@@ -128,17 +136,17 @@ pub fn compare_files(files_before: &Vec<File>, files: &Vec<File>) -> Vec<ChangeR
                 index += 1;
                 index_before += 1;
             } else {
-                file_change_records.push(ChangeRecord::init_modiry_file_record(file.name.clone()));
+                file_change_records.push(ChangeRecord::init_modiry_file_record(file.path.clone()));
             }
         } else if file.name < file_before.name {
             // 当前文件为新增文件
             index += 1;
-            file_change_records.push(ChangeRecord::init_add_file_record(file.name.clone()));
+            file_change_records.push(ChangeRecord::init_add_file_record(file.path.clone()));
         } else {
             // 该历史文件为删除文件
             index_before += 1;
             file_change_records.push(ChangeRecord::init_delete_file_record(
-                file_before.name.clone(),
+                file_before.path.clone(),
             ));
         }
     }

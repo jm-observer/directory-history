@@ -1,6 +1,6 @@
 use crate::common::{get_file_name, sha256};
 use crate::ty::{Dir, DirBuilder, File};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, Result};
 use async_recursion::async_recursion;
 use log::{debug, warn};
 use std::path::PathBuf;
@@ -9,11 +9,9 @@ use tokio::task::JoinHandle;
 
 #[async_recursion]
 pub async fn record_dir(path: PathBuf) -> Result<Dir> {
-    if path.is_dir() {
-        let mut read_dir = read_dir(path.as_path())
-            .await
-            .context(anyhow!("读取文件夹[{:?}]失败", path.as_path()))?;
+    if let Ok(mut read_dir) = read_dir(path.as_path()).await {
         let name = get_file_name(&path)?;
+        // let name = "abc".to_string();
         let mut dir = DirBuilder::new(name, path.clone());
         let mut dir_res = Vec::default();
         let mut sub_files = Vec::default();
@@ -33,25 +31,24 @@ pub async fn record_dir(path: PathBuf) -> Result<Dir> {
         }
         let dirs_handle = tokio::spawn(collect_sub_dirs(path.clone(), dir_res));
         let files_handle = tokio::spawn(collect_sub_files(path.clone(), sub_files));
-        let files = files_handle.await??;
+        let files = files_handle.await?;
         dir.update_sub_files(files);
 
-        let dirs = dirs_handle.await??;
+        let dirs = dirs_handle.await?;
         dir.update_sub_dirs(dirs);
         Ok(dir.build())
     } else {
-        warn!("文件属性有误或无权限: {:?}", path,);
-        bail!("文件属性有误或无权限: {:?}", path);
+        bail!("文件夹{:?}读取失败", path)
     }
 }
 
 pub async fn collect_sub_files(
     path: PathBuf,
     sub_file_handles: Vec<JoinHandle<Result<File>>>,
-) -> Result<Vec<File>> {
+) -> Vec<File> {
     let mut sub_files = Vec::with_capacity(sub_file_handles.len());
     for sub_file_handle in sub_file_handles.into_iter() {
-        match sub_file_handle.await.context(anyhow!("等待异常")) {
+        match sub_file_handle.await {
             Ok(res) => match res {
                 Ok(file) => {
                     sub_files.push(file);
@@ -71,16 +68,13 @@ pub async fn collect_sub_files(
         sub_files.len(),
         sub_files.capacity()
     );
-    Ok(sub_files)
+    sub_files
 }
 
-pub async fn collect_sub_dirs(
-    path: PathBuf,
-    dir_res: Vec<JoinHandle<Result<Dir>>>,
-) -> Result<Vec<Dir>> {
+pub async fn collect_sub_dirs(path: PathBuf, dir_res: Vec<JoinHandle<Result<Dir>>>) -> Vec<Dir> {
     let mut sub_dirs = Vec::with_capacity(dir_res.len());
     for sub_res in dir_res.into_iter() {
-        match sub_res.await.context(anyhow!("等待异常")) {
+        match sub_res.await {
             Ok(res) => match res {
                 Ok(file) => {
                     sub_dirs.push(file);
@@ -100,7 +94,7 @@ pub async fn collect_sub_dirs(
         sub_dirs.len(),
         sub_dirs.capacity()
     );
-    Ok(sub_dirs)
+    sub_dirs
 }
 
 pub async fn record_file(file_path: PathBuf) -> Result<File> {

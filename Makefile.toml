@@ -8,9 +8,12 @@ script_runner  = "@shell"
 script = '''
 ./target/release/directory-history record c:// ${@}
 '''
+dependencies = ["builds"]
+
 
 [tasks.compare]
 script_runner  = "@shell"
 script = '''
 ./target/release/directory-history compare ${@}
 '''
+dependencies = ["builds"]

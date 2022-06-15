@@ -1,13 +1,14 @@
+#![allow(unused_imports)]
 use anyhow::Result;
 use clap::Parser;
 use directory_history::command::{Cli, Commands};
 use directory_history::{compare, record};
 use log::error;
-use log::LevelFilter::Info;
+use log::LevelFilter::{Debug, Info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    custom_utils::logger::logger_stdout(Info);
+    custom_utils::logger::logger_stdout(Debug);
 
     let cli = Cli::parse();
     match cli.command {

@@ -2,15 +2,16 @@ pub mod compare;
 
 use crate::common::sha256;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct File {
     pub(crate) name: String,
     pub(crate) path: PathBuf,
     pub(crate) sha256: String,
 }
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Dir {
     pub(crate) name: String,
     pub(crate) path: PathBuf,
@@ -71,6 +72,10 @@ impl DirBuilder {
             x.push_str(item.sha256.as_str());
             x
         });
+        let res = dirs.iter().fold(res, |mut x, item| {
+            x.push_str(item.sha256.as_str());
+            x
+        });
         let sha256 = sha256(res.as_bytes());
         Dir {
             name,
@@ -95,5 +100,21 @@ impl Dir {
             }
         }
         None
+    }
+}
+
+impl Debug for File {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "path: {:?}, sha256: {}", self.path, self.sha256)
+    }
+}
+
+impl Debug for Dir {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "path: {:?}, sha256: {}, files: {:?}, sub_dirs: {:?}",
+            self.path, self.sha256, self.files, self.dirs
+        )
     }
 }
