@@ -3,19 +3,20 @@ use std::cmp::Ordering;
 use std::path::PathBuf;
 
 #[repr(u64)]
-#[derive(Eq, PartialEq, PartialOrd, Serialize, Debug, Copy, Clone)]
+#[derive(Serialize, Debug, Copy, Clone, PartialEq, Eq)]
 enum FileChangeTy {
     Add = 0,
     Delete = 1,
     Modify = 2,
 }
-#[derive(Eq, PartialEq, PartialOrd, Serialize, Debug)]
+
+#[derive(Serialize, Debug, PartialEq, Eq)]
 enum FileTy {
     File,
     Dir,
 }
 
-#[derive(Eq, PartialEq, PartialOrd, Serialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct ChangeRecord {
     path: PathBuf,
     file_ty: FileTy,
@@ -67,6 +68,22 @@ impl ChangeRecord {
 //     }
 // }
 
+impl Eq for ChangeRecord {}
+
+impl PartialEq<Self> for ChangeRecord {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path
+            && self.file_ty == other.file_ty
+            && self.change_ty == other.change_ty
+    }
+}
+
+impl PartialOrd<Self> for ChangeRecord {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for ChangeRecord {
     fn cmp(&self, other: &Self) -> Ordering {
         if self.file_ty == other.file_ty {
@@ -81,6 +98,12 @@ impl Ord for ChangeRecord {
     }
 }
 
+impl PartialOrd<Self> for FileTy {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for FileTy {
     fn cmp(&self, other: &Self) -> Ordering {
         if self == other {
@@ -92,6 +115,13 @@ impl Ord for FileTy {
         }
     }
 }
+
+impl PartialOrd<Self> for FileChangeTy {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for FileChangeTy {
     fn cmp(&self, other: &Self) -> Ordering {
         let self_val = *self as u64;
