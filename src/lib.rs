@@ -1,9 +1,7 @@
-// pub mod buffer;
 pub mod collect;
 pub mod command;
 pub mod common;
 pub mod compare;
-// pub mod compare_v2;
 pub mod ty;
 
 use crate::collect::record_dir;
@@ -12,10 +10,20 @@ use crate::compare::compare_dir;
 use crate::ty::Dir;
 use anyhow::Result;
 use log::{debug, info};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 pub async fn record(record: Record) -> Result<()> {
     info!("record: {:?}", record);
-    let record_res = record_dir(record.target_path).await?;
+    let excludes: Option<Arc<HashMap<String, u8>>> = if let Some(excludes) = record.excludes {
+        let tmp: Vec<&str> = excludes.split(",").collect();
+        debug!("excludes: {:?}", tmp);
+        let tmp: HashMap<String, u8> = tmp.into_iter().map(|x| (x.to_string(), 1)).collect();
+        Some(Arc::new(tmp))
+    } else {
+        None
+    };
+    let record_res = record_dir(record.target_path, excludes).await?;
     let data = serde_json::to_vec(&record_res)?;
     tokio::fs::write(record.record_name, data).await?;
     Ok(())

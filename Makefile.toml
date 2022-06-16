@@ -6,7 +6,7 @@ cargo build --release
 [tasks.record]
 script_runner  = "@shell"
 script = '''
-./target/release/directory-history record c:// ${@}
+./target/release/directory-history record -e=Temp,$Recycle.Bin -t c:// -r ${@}
 '''
 dependencies = ["builds"]
 
@@ -14,6 +14,6 @@ dependencies = ["builds"]
 [tasks.compare]
 script_runner  = "@shell"
 script = '''
-./target/release/directory-history compare ${@}
+./target/release/directory-history cmp ${@}
 '''
 dependencies = ["builds"]
