@@ -5,8 +5,10 @@ cargo build --release
 
 [tasks.record]
 script_runner  = "@shell"
+# cargo make record e.json
+#-e=Temp,$Recycle.Bin
 script = '''
-./target/release/directory-history record -e=Temp,$Recycle.Bin -t c:// -r ${@}
+./target/release/directory-history record  -t e:// -r ${@}
 '''
 dependencies = ["builds"]
 

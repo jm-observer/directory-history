@@ -8,7 +8,7 @@ use structopt::StructOpt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    custom_utils::logger::logger_stdout(Debug);
+    custom_utils::logger::logger_stdout(Info);
 
     let cli = Commands::from_args();
     match cli {

@@ -9,7 +9,7 @@ use crate::command::{Compare, Record};
 use crate::compare::compare_dir;
 use crate::ty::Dir;
 use anyhow::Result;
-use log::{debug, info};
+use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -23,9 +23,21 @@ pub async fn record(record: Record) -> Result<()> {
     } else {
         None
     };
-    let record_res = record_dir(record.target_path, excludes).await?;
-    let data = serde_json::to_vec(&record_res)?;
-    tokio::fs::write(record.record_name, data).await?;
+    let target_path = record.target_path.canonicalize()?;
+    if let Some(record_res) = record_dir(target_path, excludes).await? {
+        info!(
+            "success dirs(包含忽略): {}, fail dirs: {}",
+            record_res.success_dirs, record_res.fail_dirs
+        );
+        info!(
+            "success files: {}, fail files: {}",
+            record_res.success_files, record_res.fail_files
+        );
+        let data = serde_json::to_vec(&record_res)?;
+        tokio::fs::write(record.record_name, data).await?;
+    } else {
+        warn!("record_dir none");
+    }
     Ok(())
 }
 pub async fn compare(compare: Compare) -> Result<()> {

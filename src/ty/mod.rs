@@ -18,6 +18,10 @@ pub struct Dir {
     pub(crate) sha256: String,
     pub(crate) files: Vec<File>,
     pub(crate) dirs: Vec<Dir>,
+    pub(crate) success_dirs: usize,
+    pub(crate) fail_dirs: usize,
+    pub(crate) success_files: usize,
+    pub(crate) fail_files: usize,
 }
 
 impl File {
@@ -35,6 +39,10 @@ pub struct DirBuilder {
     pub(crate) path: PathBuf,
     pub(crate) files: Vec<File>,
     pub(crate) dirs: Vec<Dir>,
+    pub(crate) success_dirs: usize,
+    pub(crate) fail_dirs: usize,
+    pub(crate) success_files: usize,
+    pub(crate) fail_files: usize,
 }
 
 impl DirBuilder {
@@ -44,13 +52,36 @@ impl DirBuilder {
             path: path.into(),
             files: Vec::default(),
             dirs: Vec::default(),
+            success_dirs: usize::default(),
+            fail_dirs: usize::default(),
+            success_files: usize::default(),
+            fail_files: usize::default(),
         }
     }
     pub fn update_sub_dirs(&mut self, dirs: Vec<Dir>) {
+        for a in dirs.iter() {
+            self.update_sub_dir_count(a);
+        }
         self.dirs = dirs;
+        // self.success_dirs += self.dirs.len();
     }
     pub fn update_sub_files(&mut self, files: Vec<File>) {
         self.files = files;
+    }
+    pub fn update_sub_dir_count(&mut self, dir: &Dir) {
+        self.success_dirs += dir.success_dirs;
+        self.fail_dirs += dir.fail_dirs;
+        self.success_files += dir.success_files;
+        self.fail_files += dir.fail_files;
+    }
+
+    pub fn update_files_count(&mut self, success: usize, fail: usize) {
+        self.success_files += success;
+        self.fail_files += fail;
+    }
+    pub fn update_dirs_count(&mut self, success: usize, fail: usize) {
+        self.success_dirs += success;
+        self.fail_dirs += fail;
     }
 
     // fn sort(&mut self) {
@@ -64,6 +95,10 @@ impl DirBuilder {
             path,
             mut files,
             mut dirs,
+            success_dirs,
+            fail_dirs,
+            success_files,
+            fail_files,
         } = self;
         files.sort_by(|x, y| x.name.cmp(&y.name));
         dirs.sort_by(|x, y| x.name.cmp(&y.name));
@@ -83,6 +118,10 @@ impl DirBuilder {
             files,
             dirs,
             sha256,
+            success_dirs,
+            fail_dirs,
+            success_files,
+            fail_files,
         }
     }
 }
