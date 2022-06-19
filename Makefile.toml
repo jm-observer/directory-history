@@ -19,3 +19,11 @@ script = '''
 ./target/release/directory-history cmp ${@}
 '''
 dependencies = ["builds"]
+
+
+
+[tasks.build-linux]
+script_runner = "@shell"
+script = '''
+docker run --rm -it -v %cd%:/home/rust/src -v %cd%/target/registry:/root/.cargo/registry messense/rust-musl-cross:x86_64-musl cargo build --release
+'''
