@@ -2,6 +2,7 @@ use serde::Serialize;
 use std::cmp::Ordering;
 use std::path::PathBuf;
 
+/// 目录没有修改的类型
 #[repr(u64)]
 #[derive(Serialize, Debug, Copy, Clone, PartialEq, Eq)]
 enum FileChangeTy {

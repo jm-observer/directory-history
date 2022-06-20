@@ -40,17 +40,37 @@ pub async fn record(record: Record) -> Result<()> {
     }
     Ok(())
 }
+
 pub async fn compare(compare: Compare) -> Result<()> {
     let data_before = tokio::fs::read(compare.before_record).await?;
     let data = tokio::fs::read(compare.record).await?;
-
     let dir_before: Dir = serde_json::from_slice(&data_before)?;
     let dir: Dir = serde_json::from_slice(&data)?;
-    let mut compare = compare_dir(dir_before, dir).await;
-    compare.sort();
+    compare_detail(&dir_before, &dir)?;
+    Ok(())
+}
 
-    debug!("{:?}", compare);
-    let data = serde_json::to_vec(&compare)?;
-    tokio::fs::write("compare-result", data).await?;
+fn compare_detail(dir_before: &Dir, dir: &Dir) -> Result<()> {
+    let mut changesets = Vec::new();
+
+    let mut dir_group = Vec::new();
+    dir_group.push((dir_before, dir));
+    loop {
+        let mut groups = Vec::new();
+        for (before, now) in dir_group.into_iter() {
+            let (mut changeset, mut group) = compare_dir(&before, &now);
+            groups.append(&mut group);
+            changesets.append(&mut changeset);
+        }
+        if groups.len() == 0 {
+            break;
+        } else {
+            dir_group = groups;
+        }
+    }
+    changesets.sort();
+    debug!("{:?}", changesets);
+    let data = serde_json::to_vec(&changesets)?;
+    std::fs::write("compare-result", data)?;
     Ok(())
 }

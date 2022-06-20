@@ -8,16 +8,17 @@ script_runner  = "@shell"
 # cargo make record e.json
 #-e=Temp,$Recycle.Bin
 script = '''
-./target/release/directory-history record  -t e:// -r ${@}
+./target/release/directory-history record  -t c:// -r e.json
 '''
 dependencies = ["builds"]
 
 
-[tasks.compare]
+[tasks.cmp]
 script_runner  = "@shell"
 script = '''
-./target/release/directory-history cmp ${@}
+./target/release/directory-history cmp -b D:\TMP-APP\c.1.json -r D:\TMP-APP\c.2.json
 '''
+#./target/release/directory-history cmp -b D:\TMP-APP\e.1.json -r D:\TMP-APP\e.2.json
 dependencies = ["builds"]
 
 
